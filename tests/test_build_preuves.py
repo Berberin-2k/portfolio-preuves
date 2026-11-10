@@ -68,6 +68,36 @@ class CatalogueTests(unittest.TestCase):
         self.assertEqual(manifest["documents"], [])
         self.assertFalse((self.out / "docs/U6/infrastructure/procedure.pdf").exists())
 
+    def test_u5_tableau_de_synthese_is_separate_from_project_proofs(self):
+        self.add_pdf("U5/tableau-de-synthese/tableau-de-synthese.pdf")
+        self.add_pdf("U5/glpi/compte-rendu.pdf")
+        manifest = build(self.root, self.out, now=self.now)
+        self.assertEqual(manifest["documents_count"], 1)
+        self.assertEqual(manifest["tableau_synthese_u5_count"], 1)
+        self.assertEqual(manifest["projects"]["R-GLPI"], 1)
+        self.assertEqual(len(manifest["documents"]), 1)
+        summary = manifest["tableau_synthese_u5"][0]
+        self.assertEqual(summary["realisation"], "U5-SYNTHESE")
+        self.assertEqual(summary["titre"], "Tableau de synthèse")
+        self.assertEqual(summary["etat"], "Document disponible — à valider")
+        self.assertIn("/docs/U5/tableau-de-synthese/tableau-de-synthese.pdf", summary["url"])
+        self.assertTrue((self.out / summary["source_path"]).is_file())
+        self.assertNotIn(summary, manifest["documents"])
+
+    def test_u5_tableau_is_removed_when_pdf_deleted(self):
+        file = self.add_pdf("U5/tableau-de-synthese/tableau-de-synthese.pdf")
+        build(self.root, self.out, now=self.now)
+        file.unlink()
+        updated = build(self.root, self.out, now=self.now)
+        self.assertEqual(updated["tableau_synthese_u5"], [])
+        self.assertEqual(updated["tableau_synthese_u5_count"], 0)
+        self.assertFalse((self.out / "docs/U5/tableau-de-synthese/tableau-de-synthese.pdf").exists())
+
+    def test_u5_tableau_validity_is_checked_too(self):
+        self.add_pdf("U5/tableau-de-synthese/not-a-pdf.pdf", b"not a PDF" * 8)
+        with self.assertRaisesRegex(ValueError, "sans signature PDF"):
+            build(self.root, self.out, now=self.now)
+
     def test_unknown_project_fails_instead_of_silent_omission(self):
         self.add_pdf("U7/inconnu/compte-rendu.pdf")
         with self.assertRaisesRegex(ValueError, "hors d'un dossier"):
