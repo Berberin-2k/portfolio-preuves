@@ -28,9 +28,12 @@ PROJECTS: dict[str, str] = {
     "U6/vlan": "R-VLAN",
     "U6/infrastructure": "R-INFRA",
 }
+SYNTHESIS_DIR = "U5/tableau-de-synthese"
+SYNTHESIS_ID = "U5-SYNTHESE"
 DEFAULT_BASE_URL = "https://berberin-2k.github.io/portfolio-preuves"
 TITLE_MAP = {
     "compte rendu": "Compte rendu",
+    "tableau de synthese": "Tableau de synthèse",
     "dossier technique": "Dossier technique",
     "rapport": "Rapport",
     "documentation": "Documentation",
@@ -88,13 +91,15 @@ def build(root: Path, output: Path, base_url: str = DEFAULT_BASE_URL, now: dt.da
     all_pdfs = sorted(docs.rglob("*"), key=lambda p: p.as_posix().casefold())
     actual_files = [p for p in all_pdfs if p.is_file() and p.suffix.lower() == ".pdf"]
     documents = []
+    tableaux_synthese_u5 = []
     seen_names: set[str] = set()
     copies: list[tuple[Path, Path]] = []
 
     for file in actual_files:
         rel = file.relative_to(docs)
         folder = rel.parent.as_posix()
-        if folder not in PROJECTS:
+        is_synthesis = folder == SYNTHESIS_DIR
+        if folder not in PROJECTS and not is_synthesis:
             raise ValueError(f"PDF hors d'un dossier de projet reconnu : docs/{rel.as_posix()}")
         size = validate_pdf(file)
         rel_public = Path("docs") / rel
@@ -106,8 +111,8 @@ def build(root: Path, output: Path, base_url: str = DEFAULT_BASE_URL, now: dt.da
         seen_names.add(key)
         digest = hashlib.sha256(file.read_bytes()).hexdigest()
         stable_id = hashlib.sha256(rel_public.as_posix().encode("utf-8")).hexdigest()[:12].upper()
-        project = PROJECTS[folder]
-        documents.append({
+        project = SYNTHESIS_ID if is_synthesis else PROJECTS[folder]
+        record = {
             "id": f"AUTO-{stable_id}",
             "realisation": project,
             "titre": title_from_filename(file.stem),
@@ -120,7 +125,11 @@ def build(root: Path, output: Path, base_url: str = DEFAULT_BASE_URL, now: dt.da
             "source_path": rel_public.as_posix(),
             "size_bytes": size,
             "sha256": digest,
-        })
+        }
+        if is_synthesis:
+            tableaux_synthese_u5.append(record)
+        else:
+            documents.append(record)
         copies.append((file, output / rel_public))
 
     # Generate only after all uploads have passed validation.
@@ -138,6 +147,8 @@ def build(root: Path, output: Path, base_url: str = DEFAULT_BASE_URL, now: dt.da
         "publication": "GitHub Pages",
         "repository": "Berberin-2k/portfolio-preuves",
         "documents_count": len(documents),
+        "tableau_synthese_u5_count": len(tableaux_synthese_u5),
+        "tableau_synthese_u5": tableaux_synthese_u5,
         "projects": {value: sum(d["realisation"] == value for d in documents)
                      for value in PROJECTS.values()},
         "documents": documents,
@@ -165,7 +176,7 @@ def main() -> None:
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL)
     args = parser.parse_args()
     manifest = build(args.root, args.output, args.base_url)
-    print(f"[OK] {manifest['documents_count']} PDF(s) indexés")
+    print(f"[OK] {manifest['documents_count']} PDF(s) de projet et {manifest['tableau_synthese_u5_count']} tableau(x) de synthèse U5")
     print("Projet(s) : " + ", ".join(f"{key}={count}" for key, count in manifest["projects"].items()))
 
 
