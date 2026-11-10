@@ -98,6 +98,68 @@ class CatalogueTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "sans signature PDF"):
             build(self.root, self.out, now=self.now)
 
+    def test_empty_repository_has_no_certificates_or_cv(self):
+        manifest = build(self.root, self.out, now=self.now)
+        self.assertEqual(manifest["certifications"], [])
+        self.assertEqual(manifest["certifications_count"], 0)
+        self.assertIsNone(manifest["cv"])
+
+    def test_certificates_and_cv_have_distinct_catalogue_fields(self):
+        self.add_pdf("certifications/TOEIC-935.pdf")
+        self.add_pdf("certifications/Certification_Linux.pdf")
+        self.add_pdf("cv/cv.pdf")
+        self.add_pdf("U5/glpi/rapport.pdf")
+        manifest = build(self.root, self.out, now=self.now)
+        self.assertEqual(manifest["documents_count"], 1)
+        self.assertEqual(manifest["certifications_count"], 2)
+        self.assertEqual(
+            sorted(d["titre"] for d in manifest["certifications"]),
+            ["Certification Linux", "TOEIC 935"],
+        )
+        for item in manifest["certifications"]:
+            self.assertEqual(item["realisation"], "CERTIFICATION")
+            self.assertEqual(item["etat"], "Document disponible — à valider")
+            self.assertTrue(item["url"].startswith(
+                "https://berberin-2k.github.io/portfolio-preuves/docs/certifications/"
+            ))
+            self.assertTrue((self.out / item["source_path"]).exists())
+        cv = manifest["cv"]
+        self.assertEqual(cv["realisation"], "CV")
+        self.assertEqual(cv["titre"], "Curriculum vitae")
+        self.assertEqual(
+            cv["url"], "https://berberin-2k.github.io/portfolio-preuves/docs/cv/cv.pdf"
+        )
+        self.assertTrue((self.out / "docs/cv/cv.pdf").is_file())
+        self.assertNotIn(cv, manifest["documents"])
+        self.assertNotIn(cv, manifest["certifications"])
+
+    def test_cv_and_certificate_are_removed_when_deleted(self):
+        cv = self.add_pdf("cv/cv.pdf")
+        cert = self.add_pdf("certifications/CCNA.pdf")
+        build(self.root, self.out, now=self.now)
+        cv.unlink()
+        cert.unlink()
+        manifest = build(self.root, self.out, now=self.now)
+        self.assertIsNone(manifest["cv"])
+        self.assertEqual(manifest["certifications"], [])
+        self.assertFalse((self.out / "docs/cv/cv.pdf").exists())
+        self.assertFalse((self.out / "docs/certifications/CCNA.pdf").exists())
+
+    def test_cv_requires_exact_single_public_filename(self):
+        self.add_pdf("cv/CV-2026.pdf")
+        with self.assertRaisesRegex(ValueError, "exactement"):
+            build(self.root, self.out, now=self.now)
+
+    def test_certification_pdf_is_validated(self):
+        self.add_pdf("certifications/faux.pdf", b"not a real PDF" * 4)
+        with self.assertRaisesRegex(ValueError, "sans signature PDF"):
+            build(self.root, self.out, now=self.now)
+
+    def test_nested_certification_folder_rejected(self):
+        self.add_pdf("certifications/subfolder/suspicious.pdf")
+        with self.assertRaisesRegex(ValueError, "hors d'un dossier"):
+            build(self.root, self.out, now=self.now)
+
     def test_unknown_project_fails_instead_of_silent_omission(self):
         self.add_pdf("U7/inconnu/compte-rendu.pdf")
         with self.assertRaisesRegex(ValueError, "hors d'un dossier"):
