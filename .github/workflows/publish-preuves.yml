@@ -47,6 +47,23 @@ jobs:
           assert manifest["schema_version"] == 1
           assert manifest["documents_count"] == len(manifest["documents"])
           assert manifest["tableau_synthese_u5_count"] == len(manifest["tableau_synthese_u5"])
+          assert manifest["certifications_count"] == len(manifest["certifications"])
+          for certificate in manifest["certifications"]:
+              assert certificate["realisation"] == "CERTIFICATION"
+              assert certificate["etat"] == "Document disponible — à valider"
+              assert certificate["url"].startswith(
+                  "https://berberin-2k.github.io/portfolio-preuves/docs/certifications/"
+              )
+              assert (Path("site") / certificate["source_path"]).is_file()
+          cv = manifest["cv"]
+          if cv is not None:
+              assert cv["realisation"] == "CV"
+              assert cv["etat"] == "Document disponible — à valider"
+              assert cv["source_path"] == "docs/cv/cv.pdf"
+              assert cv["url"] == (
+                  "https://berberin-2k.github.io/portfolio-preuves/docs/cv/cv.pdf"
+              )
+              assert (Path("site") / cv["source_path"]).is_file()
           for document in manifest["tableau_synthese_u5"]:
               assert document["realisation"] == "U5-SYNTHESE"
               assert document["etat"] == "Document disponible — à valider"
