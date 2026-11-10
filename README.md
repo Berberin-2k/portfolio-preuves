@@ -9,6 +9,7 @@ Ce dépôt public conserve les comptes rendus et dossiers techniques du **Portfo
 ## 1. Ajouter un document en 30 secondes
 
 1. Ouvrir le dossier de la réalisation correspondant à votre projet :
+   - [U5 · Tableau de synthèse](docs/U5/tableau-de-synthese) — document transversal E5/U5, indépendant des projets.
    - [U5 · GLPI](docs/U5/glpi)
    - [U5 · Veille](docs/U5/veille)
    - [U5 · Portail documentaire](docs/U5/portail)
@@ -31,6 +32,8 @@ Ce dépôt public conserve les comptes rendus et dossiers techniques du **Portfo
 | E6 / U6 | `docs/U6/vlan/` | `R-VLAN` — Conception et déploiement de VLAN |
 | E6 / U6 | `docs/U6/infrastructure/` | `R-INFRA` — Services réseau et supervision |
 
+**Tableau de synthèse E5/U5 :** placez votre PDF dans `docs/U5/tableau-de-synthese/` (nom conseillé : `tableau-de-synthese.pdf`). Ce document se montre directement **au-dessus de la matrice** lorsque le lecteur choisit **U5**, sans être rattaché à un projet particulier. Le catalogue public conserve une liste séparée `tableau_synthese_u5`; la page Framer la lit automatiquement sans Publish manuel. Ne placez pas ce PDF dans `docs/U5/glpi/`, `docs/U5/veille/` ou `docs/U5/portail/`.
+
 Les noms des fichiers servent de titres par défaut : `compte-rendu.pdf` → **Compte rendu**, `dossier-technique.pdf` → **Dossier technique**. Les PDF avec des espaces ou accents dans le nom sont pris en charge.
 
 **Un dépôt public n'est pas un stockage de fichiers confidentiels.** Avant chaque upload, supprimer ou masquer les noms de clients, identifiants, mots de passe, clés, secrets, coordonnées personnelles et informations internes sensibles.
@@ -45,7 +48,9 @@ Les noms des fichiers servent de titres par défaut : `compte-rendu.pdf` → **C
 - **Catalogue public :** https://berberin-2k.github.io/portfolio-preuves/preuves.json
 - **Fichiers PDF publics :** `https://berberin-2k.github.io/portfolio-preuves/docs/U6/vlan/compte-rendu.pdf` (exemple de format d'URL, disponible uniquement si le fichier existe).
 
-Le script ne publie que des PDF reconnaissables (`%PDF-` et marqueur de fin), de taille maximale 25 Mo par fichier, situés dans l'un des cinq dossiers autorisés. Une erreur bloque la publication pour éviter une liste de preuves incomplète ou trompeuse. Les fichiers supprimés du dépôt disparaissent aussi du catalogue après le prochain déploiement.
+Le manifeste `preuves.json` contient maintenant deux groupes : `documents` (PDF liés aux réalisations) et `tableau_synthese_u5` (PDF transversaux de l'épreuve U5). Les deux groupes sont publiés par le même workflow.
+
+Le script ne publie que des PDF reconnaissables (`%PDF-` et marqueur de fin), de taille maximale 25 Mo par fichier, situés dans l'un des cinq dossiers de projets autorisés ou dans `docs/U5/tableau-de-synthese/`. Une erreur bloque la publication pour éviter une liste de preuves incomplète ou trompeuse. Les fichiers supprimés du dépôt disparaissent aussi du catalogue après le prochain déploiement.
 
 **Déploiement initial :** dans **Settings → Pages → Build and deployment**, sélectionner **GitHub Actions** comme *Source* (une seule fois), puis relancer le workflow si nécessaire. Cette opération nécessite des droits d'administration sur le dépôt.
 
