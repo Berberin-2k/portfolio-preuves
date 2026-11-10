@@ -46,6 +46,14 @@ jobs:
           manifest = json.loads(Path("site/preuves.json").read_text(encoding="utf-8"))
           assert manifest["schema_version"] == 1
           assert manifest["documents_count"] == len(manifest["documents"])
+          assert manifest["tableau_synthese_u5_count"] == len(manifest["tableau_synthese_u5"])
+          for document in manifest["tableau_synthese_u5"]:
+              assert document["realisation"] == "U5-SYNTHESE"
+              assert document["etat"] == "Document disponible — à valider"
+              assert document["url"].startswith(
+                  "https://berberin-2k.github.io/portfolio-preuves/docs/U5/tableau-de-synthese/"
+              )
+              assert (Path("site") / document["source_path"]).is_file()
           expected = {"R-GLPI", "R-VEILLE", "R-PORTAIL", "R-VLAN", "R-INFRA"}
           assert set(manifest["projects"]) == expected
           for document in manifest["documents"]:
