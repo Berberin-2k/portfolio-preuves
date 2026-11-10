@@ -1,0 +1,68 @@
+name: Publier les preuves PDF du Portfolio
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - '.github/workflows/publish-preuves.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-portfolio-preuves
+  cancel-in-progress: true
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: \${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Tester le générateur et ses garde-fous
+        run: python -m unittest discover -s tests -v
+      - name: Construire le catalogue et copier les PDF
+        run: |
+          python scripts/build_preuves.py \
+            --base-url "https://berberin-2k.github.io/portfolio-preuves"
+          python -m json.tool site/preuves.json > /dev/null
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path("site/preuves.json").read_text(encoding="utf-8"))
+          assert manifest["schema_version"] == 1
+          assert manifest["documents_count"] == len(manifest["documents"])
+          expected = {"R-GLPI", "R-VEILLE", "R-PORTAIL", "R-VLAN", "R-INFRA"}
+          assert set(manifest["projects"]) == expected
+          for document in manifest["documents"]:
+              assert document["realisation"] in expected
+              assert document["etat"] == "Document disponible — à valider"
+              assert document["url"].startswith(
+                  "https://berberin-2k.github.io/portfolio-preuves/docs/"
+              )
+              assert (Path("site") / document["source_path"]).is_file()
+          print("Validated", len(manifest["documents"]), "PDF documents")
+          PY
+      - name: Configurer GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Préparer les fichiers publics
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+      - name: Publier sur GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
