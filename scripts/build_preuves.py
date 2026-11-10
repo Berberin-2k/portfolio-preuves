@@ -30,9 +30,13 @@ PROJECTS: dict[str, str] = {
 }
 SYNTHESIS_DIR = "U5/tableau-de-synthese"
 SYNTHESIS_ID = "U5-SYNTHESE"
+CERTIFICATIONS_DIR = "certifications"
+CV_DIR = "cv"
+CV_FILENAME = "cv.pdf"
 DEFAULT_BASE_URL = "https://berberin-2k.github.io/portfolio-preuves"
 TITLE_MAP = {
     "compte rendu": "Compte rendu",
+    "cv": "Curriculum vitae",
     "tableau de synthese": "Tableau de synthèse",
     "dossier technique": "Dossier technique",
     "rapport": "Rapport",
@@ -92,6 +96,8 @@ def build(root: Path, output: Path, base_url: str = DEFAULT_BASE_URL, now: dt.da
     actual_files = [p for p in all_pdfs if p.is_file() and p.suffix.lower() == ".pdf"]
     documents = []
     tableaux_synthese_u5 = []
+    certifications = []
+    cv_document = None
     seen_names: set[str] = set()
     copies: list[tuple[Path, Path]] = []
 
@@ -99,8 +105,14 @@ def build(root: Path, output: Path, base_url: str = DEFAULT_BASE_URL, now: dt.da
         rel = file.relative_to(docs)
         folder = rel.parent.as_posix()
         is_synthesis = folder == SYNTHESIS_DIR
-        if folder not in PROJECTS and not is_synthesis:
-            raise ValueError(f"PDF hors d'un dossier de projet reconnu : docs/{rel.as_posix()}")
+        is_certification = folder == CERTIFICATIONS_DIR
+        is_cv = folder == CV_DIR
+        if folder not in PROJECTS and not (is_synthesis or is_certification or is_cv):
+            raise ValueError(f"PDF hors d'un dossier reconnu : docs/{rel.as_posix()}")
+        if is_cv and file.name != CV_FILENAME:
+            raise ValueError(f"Le CV doit être nommé exactement docs/cv/{CV_FILENAME}")
+        if is_certification and len(file.stem.strip()) < 3:
+            raise ValueError(f"Nom de certification trop court : docs/{rel.as_posix()}")
         size = validate_pdf(file)
         rel_public = Path("docs") / rel
         url_path = "/".join(quote(part, safe="") for part in rel_public.parts)
@@ -111,11 +123,15 @@ def build(root: Path, output: Path, base_url: str = DEFAULT_BASE_URL, now: dt.da
         seen_names.add(key)
         digest = hashlib.sha256(file.read_bytes()).hexdigest()
         stable_id = hashlib.sha256(rel_public.as_posix().encode("utf-8")).hexdigest()[:12].upper()
-        project = SYNTHESIS_ID if is_synthesis else PROJECTS[folder]
+        project = (
+            SYNTHESIS_ID if is_synthesis else
+            "CERTIFICATION" if is_certification else
+            "CV" if is_cv else PROJECTS[folder]
+        )
         record = {
             "id": f"AUTO-{stable_id}",
             "realisation": project,
-            "titre": title_from_filename(file.stem),
+            "titre": "Curriculum vitae" if is_cv else title_from_filename(file.stem),
             "type": "Document PDF",
             "format": "PDF",
             "etat": "Document disponible — à valider",
@@ -128,6 +144,14 @@ def build(root: Path, output: Path, base_url: str = DEFAULT_BASE_URL, now: dt.da
         }
         if is_synthesis:
             tableaux_synthese_u5.append(record)
+        elif is_certification:
+            # The filename supplies only the display title; issuer, award date
+            # and authenticity must not be invented from an arbitrary PDF.
+            certifications.append(record)
+        elif is_cv:
+            if cv_document is not None:
+                raise ValueError("Un seul CV PDF est autorisé")
+            cv_document = record
         else:
             documents.append(record)
         copies.append((file, output / rel_public))
@@ -149,6 +173,9 @@ def build(root: Path, output: Path, base_url: str = DEFAULT_BASE_URL, now: dt.da
         "documents_count": len(documents),
         "tableau_synthese_u5_count": len(tableaux_synthese_u5),
         "tableau_synthese_u5": tableaux_synthese_u5,
+        "certifications_count": len(certifications),
+        "certifications": certifications,
+        "cv": cv_document,
         "projects": {value: sum(d["realisation"] == value for d in documents)
                      for value in PROJECTS.values()},
         "documents": documents,
@@ -176,7 +203,7 @@ def main() -> None:
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL)
     args = parser.parse_args()
     manifest = build(args.root, args.output, args.base_url)
-    print(f"[OK] {manifest['documents_count']} PDF(s) de projet et {manifest['tableau_synthese_u5_count']} tableau(x) de synthèse U5")
+    print(f"[OK] Projets {manifest['documents_count']} PDF, tableau U5 {manifest['tableau_synthese_u5_count']}, certifications {manifest['certifications_count']}, CV {int(manifest['cv'] is not None)}")
     print("Projet(s) : " + ", ".join(f"{key}={count}" for key, count in manifest["projects"].items()))
 
 
