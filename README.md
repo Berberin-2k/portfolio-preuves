@@ -16,7 +16,7 @@ Ce dépôt public conserve les comptes rendus et dossiers techniques du **Portfo
    - [U6 · Infrastructure](docs/U6/infrastructure)
 2. Cliquer sur **Add file → Upload files**.
 3. Sélectionner un ou deux PDF (par exemple `compte-rendu.pdf` et `dossier-technique.pdf`), puis **Commit changes** sur `main`.
-4. Vérifier le workflow [Publier les preuves PDF](../../actions/workflows/publish-preuves.yml). Il teste les fichiers et publie le nouveau catalogue et les PDF.
+4. Vérifier le workflow [Publier les preuves PDF](https://github.com/Berberin-2k/portfolio-preuves/actions/workflows/publish-preuves.yml). Il teste les fichiers et publie le nouveau catalogue et les PDF.
 5. Ouvrir le [Portfolio Projets](https://pooboo.framer.website/projets) et consulter les preuves de la réalisation correspondante. Le site lit le catalogue à chaque ouverture ; **aucun nouveau Publish Framer n'est nécessaire**.
 
 > Les dossiers sont précréés avec `.gitkeep`. Vous n'avez **pas besoin** de modifier `preuves.json` ou les fichiers Python vous-même.
